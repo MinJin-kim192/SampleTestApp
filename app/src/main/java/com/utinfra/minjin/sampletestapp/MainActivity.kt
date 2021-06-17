@@ -9,9 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
-import androidx.activity.result.ActivityResultCallback
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.utinfra.minjin.sampletestapp.databinding.ActivityMainBinding
 import java.io.File
@@ -92,31 +90,25 @@ class MainActivity : AppCompatActivity() {
 
         Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { intent ->
 
-
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == RESULT_OK) {
-
-                    intent.resolveActivity(packageManager)?.also {
-                        intent.putExtra(MediaStore.EXTRA_OUTPUT, saveImageInAlbum(this))
-                        startActivityForResult(intent, REQUEST_CAMERA)
-                    }
-                }
+            intent.resolveActivity(packageManager)?.also {
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, saveImageInAlbum(this))
+                startActivityForResult(intent, REQUEST_CAMERA)
             }
 
         }
 
     }
 
-    //    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-//
-//        if (requestCode == REQUEST_CAMERA && resultCode == RESULT_OK) {
-//            Log.d("로그","")
-//            Toast.makeText(this, " 저장 성공", Toast.LENGTH_SHORT).show()
-//        }
-//
-//
-//    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQUEST_CAMERA && resultCode == RESULT_OK) {
+            Log.d("로그", "")
+            Toast.makeText(this, " 저장 성공", Toast.LENGTH_SHORT).show()
+        }
+
+
+    }
 
     private fun saveImageInAlbum(context: Context): Uri? {
 
