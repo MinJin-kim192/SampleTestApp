@@ -13,17 +13,22 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SampleTestApp">
+        <activity android:name=".ImageZoomActivity">
+
+        </activity>
         <activity android:name=".MainActivity">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.utinfra.minjin.sampletestapp"
+            android:authorities="com.utinfra.minjin.sampletestapp.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

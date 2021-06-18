@@ -7,14 +7,19 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import com.utinfra.minjin.sampletestapp.databinding.ActivityMainBinding
 import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.jvm.Throws
 
 
 @Suppress("DEPRECATION")
@@ -26,6 +31,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var getResult : ActivityResultLauncher<Intent>
+    private var currentPhotoPath : String? = null
+    private var photoFile : File? = null
+    private var name : String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +45,17 @@ class MainActivity : AppCompatActivity() {
 
         binding.cameraBtn.setOnClickListener {
             cameraPermission()
+
+        }
+
+        getResult = registerForActivityResult(
+                ActivityResultContracts.StartActivityForResult()) { result ->
+
+            if(result.resultCode == RESULT_OK) {
+
+                saveImageInAlbum(this)
+            }
+
         }
 
     }
@@ -59,7 +79,6 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
-
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -88,32 +107,53 @@ class MainActivity : AppCompatActivity() {
 
     private fun dispatchTakePictureIntent() {
 
-        Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { intent ->
+        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
 
-            intent.resolveActivity(packageManager)?.also {
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, saveImageInAlbum(this))
-                startActivityForResult(intent, REQUEST_CAMERA)
-            }
+        takePictureIntent.resolveActivity(packageManager)
 
+        photoFile = try {
+            createImageFile()
+        } catch (e : IOException) {
+            null
         }
+
+        photoFile?.also {
+            val photoURI : Uri = FileProvider.getUriForFile(
+                    this,
+                    "com.utinfra.minjin.sampletestapp.fileprovider",
+                    it
+            )
+
+            takePictureIntent.putExtra(
+                    MediaStore.EXTRA_OUTPUT,
+                    photoURI
+            )
+        }
+
+        getResult.launch(takePictureIntent)
 
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+    @Throws(IOException::class)
+    private fun createImageFile() : File {
 
-        if (requestCode == REQUEST_CAMERA && resultCode == RESULT_OK) {
-            Log.d("로그", "")
-            Toast.makeText(this, " 저장 성공", Toast.LENGTH_SHORT).show()
+        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
+        val name = "JPEG_${timeStamp}_"
+        val storageDir : File? = getExternalFilesDir(Environment.DIRECTORY_DCIM + "/TEST/")
+
+        this.name = name
+
+        return  File.createTempFile(
+                name,
+                ".jpg",
+                storageDir
+        ).apply {
+            currentPhotoPath = absolutePath
         }
-
 
     }
 
     private fun saveImageInAlbum(context: Context): Uri? {
-
-        val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss").format(Date())
-        val name = "JPEG_${timeStamp}_"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 
@@ -122,7 +162,8 @@ class MainActivity : AppCompatActivity() {
             with(values) {
                 put(MediaStore.Images.Media.TITLE, name)
                 put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis())
-                put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/KiniCare")
+                put(MediaStore.Images.Media.BUCKET_ID, name)
+                put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/TEST")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             }
 
@@ -133,14 +174,11 @@ class MainActivity : AppCompatActivity() {
 
         } else {
 
-            val dir = "/storage/emulated/0/DCIM/Folder/KiniCare"
-            val file = File(dir)
+            val file = photoFile!!
 
             if (!file.exists()) {
                 file.mkdirs()
             }
-
-            val imgFile = File(file, name)
 
             val values = ContentValues()
 
@@ -148,7 +186,7 @@ class MainActivity : AppCompatActivity() {
                 put(MediaStore.Images.Media.TITLE, name)
                 put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis())
                 put(MediaStore.Images.Media.BUCKET_ID, name)
-                put(MediaStore.Images.Media.DATA, imgFile.absolutePath)
+                put(MediaStore.Images.Media.DATA, currentPhotoPath)
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             }
 
@@ -156,9 +194,9 @@ class MainActivity : AppCompatActivity() {
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 values
             )
+
         }
 
     }
-
 
 }
